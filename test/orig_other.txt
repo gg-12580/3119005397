@@ -1,0 +1,189 @@
+﻿一、Levenshtein距离
+一般的，我们在NLP中评价模型的时候，经常会使用计算得到的Levenshtein距离作为模型的评分（正确率或错误率）。
+
+Levenshtein距离又称作编辑距离（Edit Distance），是指两个字符之间，有一个转变成另一个所需的最少编辑操作次数。被允许的操作有以下几种：
+a. Replace替换，将一个字符替换成另一个字符
+b. Insert插入，插入一个字符
+c. Delete删除，删除一个字符
+
+一般来说，编辑的距离越小，两个字符的相似度越大。不难分析出，两个字符串的编辑距离肯定不超过它们的最大长度（可以通过先把短串的每一位都修改成长串对应位置的字符，然后插入长串中的剩下字符）。
+
+二、算法实现
+通过编辑距离来判断两个字符串是否相等，属于动态规划算法的一种形式。
+
+Levenshtein距离的数学定义：
+在这里插入图片描述
+其中当a i = b j a_{i}=b_{j}a 
+i
+​	
+ =b 
+j
+​	
+ 时，1 ( a i ≠ b j ) 1_{(a_{i}\neq b_{j})}1 
+(a 
+i
+​	
+  
+
+​	
+ =b 
+j
+​	
+ )
+​	
+ 为0，否则为1。l e v a , b ( i , j ) lev_{a,b}(i,j)lev 
+a,b
+​	
+ (i,j)就是a的前i个字符与b的前j个字符的编辑距离。
+
+a、b的相似度S i m a , b Sim_{a,b}Sim 
+a,b
+​	
+ 为S i m a , b = 1 − ( lev ⁡ a , b ( ∣ a ∣ , ∣ b ∣ ) / m a x ( ∣ a ∣ , ∣ b ∣ ) ) Sim_{a,b}=1-(\operatorname{lev}_{a,b}(\left | a \right |,\left | b \right |)/max(\left | a \right |,\left | b \right |))Sim 
+a,b
+​	
+ =1−(lev 
+a,b
+​	
+ (∣a∣,∣b∣)/max(∣a∣,∣b∣))。
+
+1、简单举例
+通过一个例子整理思路，如计算kitten和sitting之间的编辑距离：
+
+kitten → sitten (替换 “k” -> “s”)
+sitten → sittin (替换 “e” -> “i”)
+sittin → sitting (插入"g")
+
+上面的变化过程所需要的步数就是最小的步数，所以他们之间的编辑距离就是"3"
+
+2、极端假设
+给定字符串A和B，我们首先确定他们距离的上下界限：
+
+距离最小是两个字符串之间的长度的差值
+距离最大是两个字符串中较长字符串的长度
+当且仅当字符串相同时长度为0
+当字符串的长度相同时，距离的最大长度是 Hamming distance
+两个字符串之间的距离小于等于与另外一个字符串距离之和
+根据以上规则，遍历每个字符利用递归可实现
+
+//实现方法
+private static int distance(String a, int len_a, String b, int len_b) {
+    //递归回归点
+    if (len_a == 0)
+        return len_b;
+    if (len_b == 0)
+        return len_a;
+    
+    int cos;
+    if (a.charAt(len_a-1) == b.charAt(len_b-1))
+        cos = 0;
+    else
+        cos = 1;
+
+    int re1 = distance(a, len_a - 1, b, len_b) + 1;
+    int re2 = distance(a, len_a, b, len_b - 1) + 1;
+    int re3 = distance(a, len_a - 1, b, len_b - 1) + cos;
+    //返回在a中删除一个字符、在b中删除一个字符、ab中均删除一个字符获得结果中取最小值
+    return re1 < re2 ? (re1 < re3 ? re1 : re3) : (re2 < re3 ? re2 : re3);
+}
+//测试
+public static void main(String[] args) {
+    String a = "kitten";
+    String b = "sitting";
+    int re = distnace(a, a.length(), b, b.length());
+    System.out.println(re);
+    //输出：3
+}
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+3、动态规划
+参考文章：
+
+https://blog.csdn.net/jave_f/article/details/79859805
+https://blog.csdn.net/asty9000/article/details/81384650
+https://blog.csdn.net/CSDN___LYY/article/details/85009190
+
+def normal_leven(str1, str2):
+  len_str1 = len(str1) + 1
+  len_str2 = len(str2) + 1
+  # 创建矩阵
+  matrix = [0 for n in range(len_str1 * len_str2)]
+  #矩阵的第一行
+  for i in range(len_str1):
+    matrix[i] = i
+  # 矩阵的第一列
+  for j in range(0, len(matrix), len_str1):
+    if j % len_str1 == 0:
+      matrix[j] = j // len_str1
+  # 根据状态转移方程逐步得到编辑距离
+  for i in range(1, len_str1):
+    for j in range(1, len_str2):
+      if str1[i-1] == str2[j-1]:
+        cost = 0
+      else:
+        cost = 1
+      matrix[j*len_str1+i] = min(matrix[(j-1)*len_str1+i]+1,
+                    matrix[j*len_str1+(i-1)]+1,
+                    matrix[(j-1)*len_str1+(i-1)] + cost)
+ 
+  return matrix[-1]  # 返回矩阵的最后一个值，也就是编辑距离
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+三、库函数调用
+应用的时候我们直接安装python-Levenshtein包，然后调用即可。
+
+#pip install python-Levenshtein
+
+import Levenshtein
+
+
+In [56]: Levenshtein.distance('kitten', 'sitting')
+Out[56]: 3
